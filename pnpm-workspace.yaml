@@ -1,5 +1,6 @@
 packages:
   - apps/*
+  - my-fantacalcio
   - packages/*
 autoInstallPeers: true
 minimumReleaseAge: 4320
@@ -10,3 +11,4 @@ allowBuilds:
   msgpackr-extract: true
   sharp: true
   supabase: true
+  unrs-resolver: set this to true or false
