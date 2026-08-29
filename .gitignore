@@ -31,3 +31,5 @@ playwright/.auth/
 
 # turbo
 .turbo
+.vercel
+.env*
