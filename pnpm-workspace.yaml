@@ -11,4 +11,4 @@ allowBuilds:
   msgpackr-extract: true
   sharp: true
   supabase: true
-  unrs-resolver: set this to true or false
+  unrs-resolver: true
