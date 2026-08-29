@@ -11,8 +11,17 @@ import {
 } from '@/components/ui/dropdown-menu';
 import { SidebarContent, SidebarFooter, SidebarGroup, SidebarGroupContent, SidebarGroupLabel, SidebarMenu, SidebarMenuButton, SidebarMenuItem, SidebarRail } from "@/components/ui/sidebar";
 import { signOutAction } from "@/data/auth/sign-out";
-import { User } from "@supabase/supabase-js";
-import { ChevronUp, Home, Lock, LogOut, Settings } from "lucide-react";
+import {
+  ChevronUp,
+  FileText,
+  Home,
+  Lock,
+  LogOut,
+  Settings,
+  Shield,
+  Trophy,
+  UserCircle,
+} from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useTransition } from "react";
@@ -27,11 +36,38 @@ const navigationItems: { title: string; url: string; icon: React.ElementType }[]
     url: '/private-items',
     icon: Lock,
   },
+  {
+    title: 'Leghe',
+    url: '/leghe',
+    icon: Trophy,
+  },
+  {
+    title: 'Bacheca',
+    url: '/bacheca',
+    icon: FileText,
+  },
+  {
+    title: 'Profilo',
+    url: '/profilo',
+    icon: UserCircle,
+  },
+  {
+    title: 'Admin Leghe',
+    url: '/admin/leghe',
+    icon: Shield,
+  },
 ];
 
+type SidebarUser = {
+  email?: string | null;
+  user_metadata?: {
+    name?: string;
+  } | null;
+};
 
 
-export function AppSidebarContent({ user }: { user: User }) {
+
+export function AppSidebarContent({ user }: { user: SidebarUser }) {
   const pathname = usePathname();
   const [isPending, startTransition] = useTransition();
 
@@ -42,7 +78,7 @@ export function AppSidebarContent({ user }: { user: User }) {
   }
 
   const userEmail = user?.email || 'user@example.com';
-  const userName = user?.user_metadata?.name || user.email?.split('@')[0];
+  const userName = user?.user_metadata?.name || user.email?.split('@')[0] || 'Demo User';
   const userInitials = userName
     .split(' ')
     .map((n) => n[0])

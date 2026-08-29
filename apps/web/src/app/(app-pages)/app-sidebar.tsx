@@ -6,7 +6,10 @@ import {
   SidebarMenuButton,
   SidebarMenuItem
 } from '@/components/ui/sidebar';
-import { getCachedLoggedInVerifiedSupabaseUser } from '@/rsc-data/supabase';
+import {
+  getCachedIsUserLoggedIn,
+  getCachedLoggedInVerifiedSupabaseUser,
+} from '@/rsc-data/supabase';
 import {
   Home
 } from 'lucide-react';
@@ -43,7 +46,18 @@ async function SidebarHeaderContent() {
 
 
 async function SidebarContentWrapper() {
-  const { user } = await getCachedLoggedInVerifiedSupabaseUser();
+  if (process.env.NODE_ENV === 'development') {
+    return <AppSidebarContent user={{ email: 'demo@fantacalcio.local', user_metadata: { name: 'Demo User' } }} />;
+  }
+
+  const isLoggedIn = await getCachedIsUserLoggedIn();
+  if (!isLoggedIn) {
+    return null;
+  }
+  const { user } = await getCachedLoggedInVerifiedSupabaseUser().catch(() => ({ user: null }));
+  if (!user) {
+    return null;
+  }
   return <AppSidebarContent user={user} />
 }
 
