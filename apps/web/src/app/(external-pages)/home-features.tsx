@@ -9,17 +9,17 @@ export interface HomeFeature {
 
 interface HomeFeaturesProps {
   features: HomeFeature[];
+  title: string;
+  description: string;
 }
 
-export function HomeFeatures({ features }: HomeFeaturesProps) {
+export function HomeFeatures({ features, title, description }: HomeFeaturesProps) {
   return (
     <section className="py-20 px-4">
       <div className="max-w-5xl mx-auto">
         <div className="text-center mb-12">
-          <h2 className="text-3xl font-bold tracking-tight">Everything you need</h2>
-          <p className="text-muted-foreground mt-2">
-            Production-ready features included out of the box
-          </p>
+          <h2 className="text-3xl font-bold tracking-tight">{title}</h2>
+          <p className="text-muted-foreground mt-2">{description}</p>
         </div>
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           {features.map((feature) => (

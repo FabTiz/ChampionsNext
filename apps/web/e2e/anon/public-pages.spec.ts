@@ -6,10 +6,10 @@ test.describe.parallel('Anonymous user public pages', () => {
 
     await expect(page).toHaveURL('/');
     await expect(
-      page.getByRole('heading', { name: /build your.+saas product.+faster/i })
+      page.getByRole('heading', { name: /gestisci le tue leghe.+fantacalcio/i })
     ).toBeVisible();
     await expect(
-      page.getByRole('main').getByRole('link', { name: /get started/i })
+      page.getByRole('main').getByRole('link', { name: /crea la tua lega/i })
     ).toBeVisible();
   });
 

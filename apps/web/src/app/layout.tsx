@@ -1,7 +1,7 @@
 import '@/styles/globals.css';
 import localFont from 'next/font/local';
-import { DynamicLayoutProviders } from './DynamicLayoutProviders';
 import { ClientLayout } from './ClientLayout';
+import { DynamicLayoutProviders } from './DynamicLayoutProviders';
 
 const inter = localFont({
   src: [
@@ -24,8 +24,9 @@ const robotoMono = localFont({
 });
 
 export const metadata = {
-  title: 'Nextbase Open source starter',
-  description: 'Built with Next.js, Supabase, and Tailwind CSS',
+  title: 'My Fantacalcio — Gestisci le tue leghe',
+  description:
+    'La piattaforma per gestire le tue leghe di fantacalcio: classifiche, giornate, mercato e rose in un unico posto.',
 };
 
 export default async function RootLayout({ children }: { children: React.ReactNode }) {

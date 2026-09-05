@@ -87,7 +87,7 @@ export function AppSidebarContent({ user }: { user: SidebarUser }) {
     .slice(0, 2);
   return <><SidebarContent>
     <SidebarGroup>
-      <SidebarGroupLabel>Navigation</SidebarGroupLabel>
+      <SidebarGroupLabel>Navigazione</SidebarGroupLabel>
       <SidebarGroupContent>
         <SidebarMenu>
           {navigationItems.map((item) => {
