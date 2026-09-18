@@ -14,35 +14,6 @@ export type Database = {
   }
   public: {
     Tables: {
-      classifica_champions: {
-        Row: {
-          diff_fantapunti: number
-          fantapunti_totali: number
-          punti: number
-          squad_id: number
-        }
-        Insert: {
-          diff_fantapunti?: number
-          fantapunti_totali?: number
-          punti?: number
-          squad_id: number
-        }
-        Update: {
-          diff_fantapunti?: number
-          fantapunti_totali?: number
-          punti?: number
-          squad_id?: number
-        }
-        Relationships: [
-          {
-            foreignKeyName: "classifica_champions_squad_id_fkey"
-            columns: ["squad_id"]
-            isOneToOne: true
-            referencedRelation: "squads"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
       content_blog_post_comments: {
         Row: {
           author_id: string
@@ -117,278 +88,425 @@ export type Database = {
         }
         Relationships: []
       }
-      giornate: {
+      fantacalcio_calciatori: {
         Row: {
-          id: number
-          turno_id: number
+          created_at: string
+          id: string
+          nome: string
+          ruolo: string
+          squadra_reale: string
+          valore_iniziale: number | null
         }
         Insert: {
-          id: number
-          turno_id: number
+          created_at?: string
+          id?: string
+          nome: string
+          ruolo: string
+          squadra_reale: string
+          valore_iniziale?: number | null
         }
         Update: {
-          id?: number
-          turno_id?: number
-        }
-        Relationships: [
-          {
-            foreignKeyName: "giornate_turno_id_fkey"
-            columns: ["turno_id"]
-            isOneToOne: false
-            referencedRelation: "turni"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
-      league_turn_details: {
-        Row: {
-          saved_at: string
-          turn_number: number
-          turn_state: Json
-        }
-        Insert: {
-          saved_at?: string
-          turn_number: number
-          turn_state: Json
-        }
-        Update: {
-          saved_at?: string
-          turn_number?: number
-          turn_state?: Json
+          created_at?: string
+          id?: string
+          nome?: string
+          ruolo?: string
+          squadra_reale?: string
+          valore_iniziale?: number | null
         }
         Relationships: []
       }
-      league_turns: {
+      fantacalcio_commenti_documenti: {
         Row: {
-          champions_points_away: number | null
-          champions_points_home: number | null
-          id: number
-          matchday_1_points_away: number | null
-          matchday_1_points_home: number | null
-          matchday_2_points_away: number | null
-          matchday_2_points_home: number | null
-          matchday_3_points_away: number | null
-          matchday_3_points_home: number | null
-          result: string | null
-          team_away_id: number
-          team_home_id: number
-          total_away: number | null
-          total_home: number | null
-          turn_number: number
+          autore_id: string
+          created_at: string
+          documento_id: string
+          id: string
+          testo: string
+          updated_at: string
         }
         Insert: {
-          champions_points_away?: number | null
-          champions_points_home?: number | null
-          id?: number
-          matchday_1_points_away?: number | null
-          matchday_1_points_home?: number | null
-          matchday_2_points_away?: number | null
-          matchday_2_points_home?: number | null
-          matchday_3_points_away?: number | null
-          matchday_3_points_home?: number | null
-          result?: string | null
-          team_away_id: number
-          team_home_id: number
-          total_away?: number | null
-          total_home?: number | null
-          turn_number: number
+          autore_id: string
+          created_at?: string
+          documento_id: string
+          id?: string
+          testo: string
+          updated_at?: string
         }
         Update: {
-          champions_points_away?: number | null
-          champions_points_home?: number | null
-          id?: number
-          matchday_1_points_away?: number | null
-          matchday_1_points_home?: number | null
-          matchday_2_points_away?: number | null
-          matchday_2_points_home?: number | null
-          matchday_3_points_away?: number | null
-          matchday_3_points_home?: number | null
-          result?: string | null
-          team_away_id?: number
-          team_home_id?: number
-          total_away?: number | null
-          total_home?: number | null
-          turn_number?: number
+          autore_id?: string
+          created_at?: string
+          documento_id?: string
+          id?: string
+          testo?: string
+          updated_at?: string
         }
         Relationships: [
           {
-            foreignKeyName: "league_turns_team_away_id_fkey"
-            columns: ["team_away_id"]
+            foreignKeyName: "fantacalcio_commenti_documenti_documento_id_fkey"
+            columns: ["documento_id"]
             isOneToOne: false
-            referencedRelation: "teams"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "league_turns_team_home_id_fkey"
-            columns: ["team_home_id"]
-            isOneToOne: false
-            referencedRelation: "teams"
+            referencedRelation: "fantacalcio_documenti"
             referencedColumns: ["id"]
           },
         ]
       }
-      matches: {
+      fantacalcio_documenti: {
         Row: {
-          away_team: number
-          giornata: number
-          home_team: number
-          id: number
+          autore_id: string
+          categoria: string
+          created_at: string
+          descrizione: string | null
+          file_path: string
+          id: string
+          lega_id: string | null
+          titolo: string
+          updated_at: string
+          visibilita: string
         }
         Insert: {
-          away_team: number
-          giornata: number
-          home_team: number
-          id?: never
+          autore_id: string
+          categoria?: string
+          created_at?: string
+          descrizione?: string | null
+          file_path: string
+          id?: string
+          lega_id?: string | null
+          titolo: string
+          updated_at?: string
+          visibilita?: string
         }
         Update: {
-          away_team?: number
-          giornata?: number
-          home_team?: number
-          id?: never
+          autore_id?: string
+          categoria?: string
+          created_at?: string
+          descrizione?: string | null
+          file_path?: string
+          id?: string
+          lega_id?: string | null
+          titolo?: string
+          updated_at?: string
+          visibilita?: string
         }
         Relationships: [
           {
-            foreignKeyName: "matches_away_team_fkey"
-            columns: ["away_team"]
+            foreignKeyName: "fantacalcio_documenti_lega_id_fkey"
+            columns: ["lega_id"]
             isOneToOne: false
-            referencedRelation: "squads"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "matches_giornata_fkey"
-            columns: ["giornata"]
-            isOneToOne: false
-            referencedRelation: "giornate"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "matches_home_team_fkey"
-            columns: ["home_team"]
-            isOneToOne: false
-            referencedRelation: "squads"
+            referencedRelation: "fantacalcio_leghe"
             referencedColumns: ["id"]
           },
         ]
       }
-      missioni_completate: {
+      fantacalcio_giornate: {
         Row: {
-          comune: boolean
-          id: number
-          leggendaria: boolean
-          personale: boolean
-          squad_id: number
-          turno_id: number
+          created_at: string
+          id: string
+          lega_id: string
+          numero: number
+          stato: string
         }
         Insert: {
-          comune?: boolean
-          id?: never
-          leggendaria?: boolean
-          personale?: boolean
-          squad_id: number
-          turno_id: number
+          created_at?: string
+          id?: string
+          lega_id: string
+          numero: number
+          stato?: string
         }
         Update: {
-          comune?: boolean
-          id?: never
-          leggendaria?: boolean
-          personale?: boolean
-          squad_id?: number
-          turno_id?: number
+          created_at?: string
+          id?: string
+          lega_id?: string
+          numero?: number
+          stato?: string
         }
         Relationships: [
           {
-            foreignKeyName: "missioni_completate_squad_id_fkey"
-            columns: ["squad_id"]
+            foreignKeyName: "fantacalcio_giornate_lega_id_fkey"
+            columns: ["lega_id"]
             isOneToOne: false
-            referencedRelation: "squads"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "missioni_completate_turno_id_fkey"
-            columns: ["turno_id"]
-            isOneToOne: false
-            referencedRelation: "turni"
+            referencedRelation: "fantacalcio_leghe"
             referencedColumns: ["id"]
           },
         ]
       }
-      missioni_parziali: {
+      fantacalcio_leghe: {
         Row: {
-          comune: boolean | null
-          evento_speciale: boolean | null
-          giornata: number
-          id: number
-          inserted_at: string | null
-          personale_completata: boolean | null
-          personale_scelta: string | null
-          squad_id: number
-          turno_id: number
-          updated_at: string | null
-          vittoria: boolean | null
-          voti_bassi: boolean | null
+          created_at: string
+          creatore_id: string
+          data_fine: string | null
+          data_inizio: string | null
+          descrizione: string | null
+          id: string
+          max_squadre: number
+          nome: string
+          regolamento_path: string | null
+          stagione: string | null
+          updated_at: string
         }
         Insert: {
-          comune?: boolean | null
-          evento_speciale?: boolean | null
-          giornata: number
-          id?: never
-          inserted_at?: string | null
-          personale_completata?: boolean | null
-          personale_scelta?: string | null
-          squad_id: number
-          turno_id: number
-          updated_at?: string | null
-          vittoria?: boolean | null
-          voti_bassi?: boolean | null
+          created_at?: string
+          creatore_id: string
+          data_fine?: string | null
+          data_inizio?: string | null
+          descrizione?: string | null
+          id?: string
+          max_squadre?: number
+          nome: string
+          regolamento_path?: string | null
+          stagione?: string | null
+          updated_at?: string
         }
         Update: {
-          comune?: boolean | null
-          evento_speciale?: boolean | null
-          giornata?: number
-          id?: never
-          inserted_at?: string | null
-          personale_completata?: boolean | null
-          personale_scelta?: string | null
-          squad_id?: number
-          turno_id?: number
-          updated_at?: string | null
-          vittoria?: boolean | null
-          voti_bassi?: boolean | null
+          created_at?: string
+          creatore_id?: string
+          data_fine?: string | null
+          data_inizio?: string | null
+          descrizione?: string | null
+          id?: string
+          max_squadre?: number
+          nome?: string
+          regolamento_path?: string | null
+          stagione?: string | null
+          updated_at?: string
         }
         Relationships: []
       }
-      missioni_personali_scelte: {
+      fantacalcio_membri_lega: {
         Row: {
-          id: number
-          missione: string
-          squad_id: number
-          turno_id: number
+          created_at: string
+          id: string
+          lega_id: string
+          ruolo: string
+          user_id: string
         }
         Insert: {
-          id?: never
-          missione: string
-          squad_id: number
-          turno_id: number
+          created_at?: string
+          id?: string
+          lega_id: string
+          ruolo?: string
+          user_id: string
         }
         Update: {
-          id?: never
-          missione?: string
-          squad_id?: number
-          turno_id?: number
+          created_at?: string
+          id?: string
+          lega_id?: string
+          ruolo?: string
+          user_id?: string
         }
         Relationships: [
           {
-            foreignKeyName: "missioni_personali_scelte_squad_id_fkey"
-            columns: ["squad_id"]
+            foreignKeyName: "fantacalcio_membri_lega_lega_id_fkey"
+            columns: ["lega_id"]
             isOneToOne: false
-            referencedRelation: "squads"
+            referencedRelation: "fantacalcio_leghe"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      fantacalcio_partite: {
+        Row: {
+          created_at: string
+          data_ora: string | null
+          giornata_id: string
+          id: string
+          lega_id: string
+          punti_casa: number | null
+          punti_ospite: number | null
+          risultato_casa: number | null
+          risultato_ospite: number | null
+          squadra_casa_id: string
+          squadra_ospite_id: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          data_ora?: string | null
+          giornata_id: string
+          id?: string
+          lega_id: string
+          punti_casa?: number | null
+          punti_ospite?: number | null
+          risultato_casa?: number | null
+          risultato_ospite?: number | null
+          squadra_casa_id: string
+          squadra_ospite_id: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          data_ora?: string | null
+          giornata_id?: string
+          id?: string
+          lega_id?: string
+          punti_casa?: number | null
+          punti_ospite?: number | null
+          risultato_casa?: number | null
+          risultato_ospite?: number | null
+          squadra_casa_id?: string
+          squadra_ospite_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "fantacalcio_partite_giornata_id_fkey"
+            columns: ["giornata_id"]
+            isOneToOne: false
+            referencedRelation: "fantacalcio_giornate"
             referencedColumns: ["id"]
           },
           {
-            foreignKeyName: "missioni_personali_scelte_turno_id_fkey"
-            columns: ["turno_id"]
+            foreignKeyName: "fantacalcio_partite_lega_id_fkey"
+            columns: ["lega_id"]
             isOneToOne: false
-            referencedRelation: "turni"
+            referencedRelation: "fantacalcio_leghe"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "fantacalcio_partite_squadra_casa_id_fkey"
+            columns: ["squadra_casa_id"]
+            isOneToOne: false
+            referencedRelation: "fantacalcio_squadre"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "fantacalcio_partite_squadra_ospite_id_fkey"
+            columns: ["squadra_ospite_id"]
+            isOneToOne: false
+            referencedRelation: "fantacalcio_squadre"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      fantacalcio_rose_squadre: {
+        Row: {
+          acquistato_per: number | null
+          calciatore_id: string
+          created_at: string
+          id: string
+          squadra_id: string
+        }
+        Insert: {
+          acquistato_per?: number | null
+          calciatore_id: string
+          created_at?: string
+          id?: string
+          squadra_id: string
+        }
+        Update: {
+          acquistato_per?: number | null
+          calciatore_id?: string
+          created_at?: string
+          id?: string
+          squadra_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "fantacalcio_rose_squadre_calciatore_id_fkey"
+            columns: ["calciatore_id"]
+            isOneToOne: false
+            referencedRelation: "fantacalcio_calciatori"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "fantacalcio_rose_squadre_squadra_id_fkey"
+            columns: ["squadra_id"]
+            isOneToOne: false
+            referencedRelation: "fantacalcio_squadre"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      fantacalcio_squadre: {
+        Row: {
+          created_at: string
+          id: string
+          lega_id: string
+          logo_url: string | null
+          nome: string
+          proprietario_id: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          lega_id: string
+          logo_url?: string | null
+          nome: string
+          proprietario_id: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          lega_id?: string
+          logo_url?: string | null
+          nome?: string
+          proprietario_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "fantacalcio_squadre_lega_id_fkey"
+            columns: ["lega_id"]
+            isOneToOne: false
+            referencedRelation: "fantacalcio_leghe"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      fantacalcio_voti_calciatori: {
+        Row: {
+          ammonizioni: number
+          assist: number
+          autogol: number
+          calciatore_id: string
+          created_at: string
+          espulsioni: number
+          gol_fatti: number
+          id: string
+          partita_id: string
+          rigori_sbagliati: number
+          voto: number
+        }
+        Insert: {
+          ammonizioni?: number
+          assist?: number
+          autogol?: number
+          calciatore_id: string
+          created_at?: string
+          espulsioni?: number
+          gol_fatti?: number
+          id?: string
+          partita_id: string
+          rigori_sbagliati?: number
+          voto: number
+        }
+        Update: {
+          ammonizioni?: number
+          assist?: number
+          autogol?: number
+          calciatore_id?: string
+          created_at?: string
+          espulsioni?: number
+          gol_fatti?: number
+          id?: string
+          partita_id?: string
+          rigori_sbagliati?: number
+          voto?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "fantacalcio_voti_calciatori_calciatore_id_fkey"
+            columns: ["calciatore_id"]
+            isOneToOne: false
+            referencedRelation: "fantacalcio_calciatori"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "fantacalcio_voti_calciatori_partita_id_fkey"
+            columns: ["partita_id"]
+            isOneToOne: false
+            referencedRelation: "fantacalcio_partite"
             referencedColumns: ["id"]
           },
         ]
@@ -417,179 +535,67 @@ export type Database = {
         }
         Relationships: []
       }
-      punteggi_parziali: {
+      profiles: {
         Row: {
-          giornata: number
-          id: number
-          inserted_at: string | null
-          punteggio: number | null
-          squad_id: number
-          turno_id: number
-          updated_at: string | null
-        }
-        Insert: {
-          giornata: number
-          id?: never
-          inserted_at?: string | null
-          punteggio?: number | null
-          squad_id: number
-          turno_id: number
-          updated_at?: string | null
-        }
-        Update: {
-          giornata?: number
-          id?: never
-          inserted_at?: string | null
-          punteggio?: number | null
-          squad_id?: number
-          turno_id?: number
-          updated_at?: string | null
-        }
-        Relationships: []
-      }
-      risultati: {
-        Row: {
-          assist: number
-          evento_speciale: boolean | null
-          fantapunti: number
-          giornata: number
-          gol: number
-          id: number
-          rigori_parati: number
-          squad_id: number
-          top4: boolean | null
-          voti_bassi: number
-        }
-        Insert: {
-          assist?: number
-          evento_speciale?: boolean | null
-          fantapunti: number
-          giornata: number
-          gol?: number
-          id?: never
-          rigori_parati?: number
-          squad_id: number
-          top4?: boolean | null
-          voti_bassi?: number
-        }
-        Update: {
-          assist?: number
-          evento_speciale?: boolean | null
-          fantapunti?: number
-          giornata?: number
-          gol?: number
-          id?: never
-          rigori_parati?: number
-          squad_id?: number
-          top4?: boolean | null
-          voti_bassi?: number
-        }
-        Relationships: [
-          {
-            foreignKeyName: "risultati_giornata_fkey"
-            columns: ["giornata"]
-            isOneToOne: false
-            referencedRelation: "giornate"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "risultati_squad_id_fkey"
-            columns: ["squad_id"]
-            isOneToOne: false
-            referencedRelation: "squads"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
-      squads: {
-        Row: {
-          id: number
-          name: string
-        }
-        Insert: {
-          id?: never
-          name: string
-        }
-        Update: {
-          id?: never
-          name?: string
-        }
-        Relationships: []
-      }
-      teams: {
-        Row: {
-          id: number
-          name: string
-        }
-        Insert: {
-          id?: number
-          name: string
-        }
-        Update: {
-          id?: number
-          name?: string
-        }
-        Relationships: []
-      }
-      turni: {
-        Row: {
-          id: number
-          nome: string
-        }
-        Insert: {
-          id: number
-          nome: string
-        }
-        Update: {
-          id?: number
-          nome?: string
-        }
-        Relationships: []
-      }
-      uomo_champions: {
-        Row: {
-          bonus: number | null
-          fase: string
-          giocatore: string
-          id: number
-          malus: number | null
+          avatar_url: string | null
+          created_at: string
+          id: string
           ruolo: string
-          squad_id: number
+          updated_at: string
+          username: string | null
         }
         Insert: {
-          bonus?: number | null
-          fase: string
-          giocatore: string
-          id?: never
-          malus?: number | null
-          ruolo: string
-          squad_id: number
-        }
-        Update: {
-          bonus?: number | null
-          fase?: string
-          giocatore?: string
-          id?: never
-          malus?: number | null
+          avatar_url?: string | null
+          created_at?: string
+          id: string
           ruolo?: string
-          squad_id?: number
+          updated_at?: string
+          username?: string | null
         }
-        Relationships: [
-          {
-            foreignKeyName: "uomo_champions_squad_id_fkey"
-            columns: ["squad_id"]
-            isOneToOne: false
-            referencedRelation: "squads"
-            referencedColumns: ["id"]
-          },
-        ]
+        Update: {
+          avatar_url?: string | null
+          created_at?: string
+          id?: string
+          ruolo?: string
+          updated_at?: string
+          username?: string | null
+        }
+        Relationships: []
       }
     }
     Views: {
       [_ in never]: never
     }
     Functions: {
-      [_ in never]: never
+      fantacalcio_is_admin: { Args: { p_user_id: string }; Returns: boolean }
+      fantacalcio_is_creatore_lega: {
+        Args: { p_lega_id: string; p_user_id: string }
+        Returns: boolean
+      }
+      fantacalcio_is_gestore_lega: {
+        Args: { p_lega_id: string; p_user_id: string }
+        Returns: boolean
+      }
+      fantacalcio_is_membro_lega: {
+        Args: { p_lega_id: string; p_user_id: string }
+        Returns: boolean
+      }
+      fantacalcio_is_proprietario_squadra: {
+        Args: { p_squadra_id: string; p_user_id: string }
+        Returns: boolean
+      }
+      fantacalcio_lega_di_partita: {
+        Args: { p_partita_id: string }
+        Returns: string
+      }
+      fantacalcio_puo_vedere_documento: {
+        Args: { p_documento_id: string; p_user_id: string }
+        Returns: boolean
+      }
+      fantacalcio_puo_vedere_squadra: {
+        Args: { p_squadra_id: string; p_user_id: string }
+        Returns: boolean
+      }
     }
     Enums: {
       [_ in never]: never
@@ -608,12 +614,12 @@ export type Tables<
   DefaultSchemaTableNameOrOptions extends
     | keyof (DefaultSchema["Tables"] & DefaultSchema["Views"])
     | { schema: keyof DatabaseWithoutInternals },
-  TableName extends DefaultSchemaTableNameOrOptions extends {
+  TableName extends (DefaultSchemaTableNameOrOptions extends {
     schema: keyof DatabaseWithoutInternals
   }
     ? keyof (DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"] &
         DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Views"])
-    : never = never,
+    : never) = never,
 > = DefaultSchemaTableNameOrOptions extends {
   schema: keyof DatabaseWithoutInternals
 }
@@ -637,11 +643,11 @@ export type TablesInsert<
   DefaultSchemaTableNameOrOptions extends
     | keyof DefaultSchema["Tables"]
     | { schema: keyof DatabaseWithoutInternals },
-  TableName extends DefaultSchemaTableNameOrOptions extends {
+  TableName extends (DefaultSchemaTableNameOrOptions extends {
     schema: keyof DatabaseWithoutInternals
   }
     ? keyof DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"]
-    : never = never,
+    : never) = never,
 > = DefaultSchemaTableNameOrOptions extends {
   schema: keyof DatabaseWithoutInternals
 }
@@ -662,11 +668,11 @@ export type TablesUpdate<
   DefaultSchemaTableNameOrOptions extends
     | keyof DefaultSchema["Tables"]
     | { schema: keyof DatabaseWithoutInternals },
-  TableName extends DefaultSchemaTableNameOrOptions extends {
+  TableName extends (DefaultSchemaTableNameOrOptions extends {
     schema: keyof DatabaseWithoutInternals
   }
     ? keyof DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"]
-    : never = never,
+    : never) = never,
 > = DefaultSchemaTableNameOrOptions extends {
   schema: keyof DatabaseWithoutInternals
 }
@@ -687,11 +693,11 @@ export type Enums<
   DefaultSchemaEnumNameOrOptions extends
     | keyof DefaultSchema["Enums"]
     | { schema: keyof DatabaseWithoutInternals },
-  EnumName extends DefaultSchemaEnumNameOrOptions extends {
+  EnumName extends (DefaultSchemaEnumNameOrOptions extends {
     schema: keyof DatabaseWithoutInternals
   }
     ? keyof DatabaseWithoutInternals[DefaultSchemaEnumNameOrOptions["schema"]]["Enums"]
-    : never = never,
+    : never) = never,
 > = DefaultSchemaEnumNameOrOptions extends {
   schema: keyof DatabaseWithoutInternals
 }
@@ -704,11 +710,11 @@ export type CompositeTypes<
   PublicCompositeTypeNameOrOptions extends
     | keyof DefaultSchema["CompositeTypes"]
     | { schema: keyof DatabaseWithoutInternals },
-  CompositeTypeName extends PublicCompositeTypeNameOrOptions extends {
+  CompositeTypeName extends (PublicCompositeTypeNameOrOptions extends {
     schema: keyof DatabaseWithoutInternals
   }
     ? keyof DatabaseWithoutInternals[PublicCompositeTypeNameOrOptions["schema"]]["CompositeTypes"]
-    : never = never,
+    : never) = never,
 > = PublicCompositeTypeNameOrOptions extends {
   schema: keyof DatabaseWithoutInternals
 }

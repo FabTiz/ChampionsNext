@@ -260,6 +260,88 @@ CREATE TABLE IF NOT EXISTS public.fantacalcio_membri_lega (
 CREATE INDEX IF NOT EXISTS fantacalcio_membri_lega_user_idx
   ON public.fantacalcio_membri_lega (user_id);
 
+-- -----------------------------------------------------------------------------
+-- Fantacalcio: funzioni di supporto per le policy RLS
+--
+-- Sono SECURITY DEFINER perche' devono leggere tabelle protette da RLS senza
+-- riattivare le policy stesse. Senza di esse le policy di `fantacalcio_leghe` e
+-- `fantacalcio_membri_lega` si richiamano a vicenda all'infinito: PostgreSQL
+-- solleva l'errore 42P17, "infinite recursion detected in policy".
+--
+-- `SET search_path = ''` obbliga a qualificare ogni nome e impedisce il
+-- dirottamento del search_path tipico delle funzioni SECURITY DEFINER.
+-- -----------------------------------------------------------------------------
+
+CREATE OR REPLACE FUNCTION public.fantacalcio_is_membro_lega(
+  p_lega_id uuid,
+  p_user_id uuid
+)
+RETURNS boolean
+LANGUAGE sql
+STABLE
+SECURITY DEFINER
+SET search_path = ''
+AS $$
+  SELECT EXISTS (
+    SELECT 1
+    FROM public.fantacalcio_membri_lega ml
+    WHERE ml.lega_id = p_lega_id
+      AND ml.user_id = p_user_id
+  );
+$$;
+
+CREATE OR REPLACE FUNCTION public.fantacalcio_is_creatore_lega(
+  p_lega_id uuid,
+  p_user_id uuid
+)
+RETURNS boolean
+LANGUAGE sql
+STABLE
+SECURITY DEFINER
+SET search_path = ''
+AS $$
+  SELECT EXISTS (
+    SELECT 1
+    FROM public.fantacalcio_leghe l
+    WHERE l.id = p_lega_id
+      AND l.creatore_id = p_user_id
+  );
+$$;
+
+CREATE OR REPLACE FUNCTION public.fantacalcio_is_gestore_lega(
+  p_lega_id uuid,
+  p_user_id uuid
+)
+RETURNS boolean
+LANGUAGE sql
+STABLE
+SECURITY DEFINER
+SET search_path = ''
+AS $$
+  SELECT EXISTS (
+    SELECT 1
+    FROM public.fantacalcio_membri_lega ml
+    WHERE ml.lega_id = p_lega_id
+      AND ml.user_id = p_user_id
+      AND ml.ruolo = 'gestore'
+  );
+$$;
+
+CREATE OR REPLACE FUNCTION public.fantacalcio_is_admin(p_user_id uuid)
+RETURNS boolean
+LANGUAGE sql
+STABLE
+SECURITY DEFINER
+SET search_path = ''
+AS $$
+  SELECT EXISTS (
+    SELECT 1
+    FROM public.profiles p
+    WHERE p.id = p_user_id
+      AND p.ruolo = 'admin'
+  );
+$$;
+
 ALTER TABLE public.fantacalcio_leghe ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.fantacalcio_membri_lega ENABLE ROW LEVEL SECURITY;
 
@@ -269,12 +351,7 @@ CREATE POLICY fantacalcio_leghe_select_policy
   USING (
     auth.role() = 'service_role'
     OR creatore_id = auth.uid()
-    OR EXISTS (
-      SELECT 1
-      FROM public.fantacalcio_membri_lega ml
-      WHERE ml.lega_id = public.fantacalcio_leghe.id
-        AND ml.user_id = auth.uid()
-    )
+    OR public.fantacalcio_is_membro_lega(id, auth.uid())
   );
 
 CREATE POLICY fantacalcio_leghe_insert_policy
@@ -299,12 +376,7 @@ CREATE POLICY fantacalcio_membri_lega_select_policy
   USING (
     auth.role() = 'service_role'
     OR user_id = auth.uid()
-    OR EXISTS (
-      SELECT 1
-      FROM public.fantacalcio_leghe l
-      WHERE l.id = public.fantacalcio_membri_lega.lega_id
-        AND l.creatore_id = auth.uid()
-    )
+    OR public.fantacalcio_is_creatore_lega(lega_id, auth.uid())
   );
 
 CREATE POLICY fantacalcio_membri_lega_insert_policy
@@ -312,12 +384,7 @@ CREATE POLICY fantacalcio_membri_lega_insert_policy
   FOR INSERT
   WITH CHECK (
     auth.role() = 'service_role'
-    OR EXISTS (
-      SELECT 1
-      FROM public.fantacalcio_leghe l
-      WHERE l.id = public.fantacalcio_membri_lega.lega_id
-        AND l.creatore_id = auth.uid()
-    )
+    OR public.fantacalcio_is_creatore_lega(lega_id, auth.uid())
   );
 
 CREATE POLICY fantacalcio_membri_lega_update_policy
@@ -325,21 +392,11 @@ CREATE POLICY fantacalcio_membri_lega_update_policy
   FOR UPDATE
   USING (
     auth.role() = 'service_role'
-    OR EXISTS (
-      SELECT 1
-      FROM public.fantacalcio_leghe l
-      WHERE l.id = public.fantacalcio_membri_lega.lega_id
-        AND l.creatore_id = auth.uid()
-    )
+    OR public.fantacalcio_is_creatore_lega(lega_id, auth.uid())
   )
   WITH CHECK (
     auth.role() = 'service_role'
-    OR EXISTS (
-      SELECT 1
-      FROM public.fantacalcio_leghe l
-      WHERE l.id = public.fantacalcio_membri_lega.lega_id
-        AND l.creatore_id = auth.uid()
-    )
+    OR public.fantacalcio_is_creatore_lega(lega_id, auth.uid())
   );
 
 CREATE POLICY fantacalcio_membri_lega_delete_policy
@@ -347,12 +404,7 @@ CREATE POLICY fantacalcio_membri_lega_delete_policy
   FOR DELETE
   USING (
     auth.role() = 'service_role'
-    OR EXISTS (
-      SELECT 1
-      FROM public.fantacalcio_leghe l
-      WHERE l.id = public.fantacalcio_membri_lega.lega_id
-        AND l.creatore_id = auth.uid()
-    )
+    OR public.fantacalcio_is_creatore_lega(lega_id, auth.uid())
   );
 
 -- =============================================================================
@@ -449,6 +501,65 @@ CREATE TABLE IF NOT EXISTS public.fantacalcio_voti_calciatori (
   UNIQUE (calciatore_id, partita_id)
 );
 
+-- -----------------------------------------------------------------------------
+-- Fantacalcio: funzioni di supporto per le policy RLS (competizione)
+--
+-- Vale la stessa motivazione del blocco precedente: le policy non possono
+-- interrogare direttamente le tabelle protette, altrimenti la catena di RLS
+-- riattiva le policy di `fantacalcio_leghe` e `fantacalcio_membri_lega`.
+-- -----------------------------------------------------------------------------
+
+CREATE OR REPLACE FUNCTION public.fantacalcio_is_proprietario_squadra(
+  p_squadra_id uuid,
+  p_user_id uuid
+)
+RETURNS boolean
+LANGUAGE sql
+STABLE
+SECURITY DEFINER
+SET search_path = ''
+AS $$
+  SELECT EXISTS (
+    SELECT 1
+    FROM public.fantacalcio_squadre s
+    WHERE s.id = p_squadra_id
+      AND s.proprietario_id = p_user_id
+  );
+$$;
+
+CREATE OR REPLACE FUNCTION public.fantacalcio_puo_vedere_squadra(
+  p_squadra_id uuid,
+  p_user_id uuid
+)
+RETURNS boolean
+LANGUAGE sql
+STABLE
+SECURITY DEFINER
+SET search_path = ''
+AS $$
+  SELECT EXISTS (
+    SELECT 1
+    FROM public.fantacalcio_squadre s
+    WHERE s.id = p_squadra_id
+      AND (
+        s.proprietario_id = p_user_id
+        OR public.fantacalcio_is_membro_lega(s.lega_id, p_user_id)
+      )
+  );
+$$;
+
+CREATE OR REPLACE FUNCTION public.fantacalcio_lega_di_partita(p_partita_id uuid)
+RETURNS uuid
+LANGUAGE sql
+STABLE
+SECURITY DEFINER
+SET search_path = ''
+AS $$
+  SELECT p.lega_id
+  FROM public.fantacalcio_partite p
+  WHERE p.id = p_partita_id;
+$$;
+
 ALTER TABLE public.fantacalcio_squadre ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.fantacalcio_calciatori ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.fantacalcio_rose_squadre ENABLE ROW LEVEL SECURITY;
@@ -462,12 +573,7 @@ CREATE POLICY fantacalcio_squadre_select_policy
   USING (
     auth.role() = 'service_role'
     OR proprietario_id = auth.uid()
-    OR EXISTS (
-      SELECT 1
-      FROM public.fantacalcio_membri_lega ml
-      WHERE ml.lega_id = public.fantacalcio_squadre.lega_id
-        AND ml.user_id = auth.uid()
-    )
+    OR public.fantacalcio_is_membro_lega(lega_id, auth.uid())
   );
 
 CREATE POLICY fantacalcio_squadre_insert_policy
@@ -476,13 +582,7 @@ CREATE POLICY fantacalcio_squadre_insert_policy
   WITH CHECK (
     auth.role() = 'service_role'
     OR proprietario_id = auth.uid()
-    OR EXISTS (
-      SELECT 1
-      FROM public.fantacalcio_membri_lega ml
-      WHERE ml.lega_id = public.fantacalcio_squadre.lega_id
-        AND ml.user_id = auth.uid()
-        AND ml.ruolo = 'gestore'
-    )
+    OR public.fantacalcio_is_gestore_lega(lega_id, auth.uid())
   );
 
 CREATE POLICY fantacalcio_squadre_update_policy
@@ -491,22 +591,12 @@ CREATE POLICY fantacalcio_squadre_update_policy
   USING (
     auth.role() = 'service_role'
     OR proprietario_id = auth.uid()
-    OR EXISTS (
-      SELECT 1
-      FROM public.fantacalcio_leghe l
-      WHERE l.id = public.fantacalcio_squadre.lega_id
-        AND l.creatore_id = auth.uid()
-    )
+    OR public.fantacalcio_is_creatore_lega(lega_id, auth.uid())
   )
   WITH CHECK (
     auth.role() = 'service_role'
     OR proprietario_id = auth.uid()
-    OR EXISTS (
-      SELECT 1
-      FROM public.fantacalcio_leghe l
-      WHERE l.id = public.fantacalcio_squadre.lega_id
-        AND l.creatore_id = auth.uid()
-    )
+    OR public.fantacalcio_is_creatore_lega(lega_id, auth.uid())
   );
 
 CREATE POLICY fantacalcio_squadre_delete_policy
@@ -515,12 +605,7 @@ CREATE POLICY fantacalcio_squadre_delete_policy
   USING (
     auth.role() = 'service_role'
     OR proprietario_id = auth.uid()
-    OR EXISTS (
-      SELECT 1
-      FROM public.fantacalcio_leghe l
-      WHERE l.id = public.fantacalcio_squadre.lega_id
-        AND l.creatore_id = auth.uid()
-    )
+    OR public.fantacalcio_is_creatore_lega(lega_id, auth.uid())
   );
 
 CREATE POLICY fantacalcio_calciatori_select_policy
@@ -533,19 +618,11 @@ CREATE POLICY fantacalcio_calciatori_write_policy
   FOR ALL
   USING (
     auth.role() = 'service_role'
-    OR EXISTS (
-      SELECT 1
-      FROM public.profiles p
-      WHERE p.id = auth.uid() AND p.ruolo = 'admin'
-    )
+    OR public.fantacalcio_is_admin(auth.uid())
   )
   WITH CHECK (
     auth.role() = 'service_role'
-    OR EXISTS (
-      SELECT 1
-      FROM public.profiles p
-      WHERE p.id = auth.uid() AND p.ruolo = 'admin'
-    )
+    OR public.fantacalcio_is_admin(auth.uid())
   );
 
 CREATE POLICY fantacalcio_rose_squadre_select_policy
@@ -553,20 +630,7 @@ CREATE POLICY fantacalcio_rose_squadre_select_policy
   FOR SELECT
   USING (
     auth.role() = 'service_role'
-    OR EXISTS (
-      SELECT 1
-      FROM public.fantacalcio_squadre s
-      WHERE s.id = public.fantacalcio_rose_squadre.squadra_id
-        AND (
-          s.proprietario_id = auth.uid()
-          OR EXISTS (
-            SELECT 1
-            FROM public.fantacalcio_membri_lega ml
-            WHERE ml.lega_id = s.lega_id
-              AND ml.user_id = auth.uid()
-          )
-        )
-    )
+    OR public.fantacalcio_puo_vedere_squadra(squadra_id, auth.uid())
   );
 
 CREATE POLICY fantacalcio_rose_squadre_write_policy
@@ -574,21 +638,11 @@ CREATE POLICY fantacalcio_rose_squadre_write_policy
   FOR ALL
   USING (
     auth.role() = 'service_role'
-    OR EXISTS (
-      SELECT 1
-      FROM public.fantacalcio_squadre s
-      WHERE s.id = public.fantacalcio_rose_squadre.squadra_id
-        AND s.proprietario_id = auth.uid()
-    )
+    OR public.fantacalcio_is_proprietario_squadra(squadra_id, auth.uid())
   )
   WITH CHECK (
     auth.role() = 'service_role'
-    OR EXISTS (
-      SELECT 1
-      FROM public.fantacalcio_squadre s
-      WHERE s.id = public.fantacalcio_rose_squadre.squadra_id
-        AND s.proprietario_id = auth.uid()
-    )
+    OR public.fantacalcio_is_proprietario_squadra(squadra_id, auth.uid())
   );
 
 CREATE POLICY fantacalcio_giornate_select_policy
@@ -596,12 +650,7 @@ CREATE POLICY fantacalcio_giornate_select_policy
   FOR SELECT
   USING (
     auth.role() = 'service_role'
-    OR EXISTS (
-      SELECT 1
-      FROM public.fantacalcio_membri_lega ml
-      WHERE ml.lega_id = public.fantacalcio_giornate.lega_id
-        AND ml.user_id = auth.uid()
-    )
+    OR public.fantacalcio_is_membro_lega(lega_id, auth.uid())
   );
 
 CREATE POLICY fantacalcio_giornate_write_policy
@@ -609,21 +658,11 @@ CREATE POLICY fantacalcio_giornate_write_policy
   FOR ALL
   USING (
     auth.role() = 'service_role'
-    OR EXISTS (
-      SELECT 1
-      FROM public.fantacalcio_leghe l
-      WHERE l.id = public.fantacalcio_giornate.lega_id
-        AND l.creatore_id = auth.uid()
-    )
+    OR public.fantacalcio_is_creatore_lega(lega_id, auth.uid())
   )
   WITH CHECK (
     auth.role() = 'service_role'
-    OR EXISTS (
-      SELECT 1
-      FROM public.fantacalcio_leghe l
-      WHERE l.id = public.fantacalcio_giornate.lega_id
-        AND l.creatore_id = auth.uid()
-    )
+    OR public.fantacalcio_is_creatore_lega(lega_id, auth.uid())
   );
 
 CREATE POLICY fantacalcio_partite_select_policy
@@ -631,12 +670,7 @@ CREATE POLICY fantacalcio_partite_select_policy
   FOR SELECT
   USING (
     auth.role() = 'service_role'
-    OR EXISTS (
-      SELECT 1
-      FROM public.fantacalcio_membri_lega ml
-      WHERE ml.lega_id = public.fantacalcio_partite.lega_id
-        AND ml.user_id = auth.uid()
-    )
+    OR public.fantacalcio_is_membro_lega(lega_id, auth.uid())
   );
 
 CREATE POLICY fantacalcio_partite_write_policy
@@ -644,21 +678,11 @@ CREATE POLICY fantacalcio_partite_write_policy
   FOR ALL
   USING (
     auth.role() = 'service_role'
-    OR EXISTS (
-      SELECT 1
-      FROM public.fantacalcio_leghe l
-      WHERE l.id = public.fantacalcio_partite.lega_id
-        AND l.creatore_id = auth.uid()
-    )
+    OR public.fantacalcio_is_creatore_lega(lega_id, auth.uid())
   )
   WITH CHECK (
     auth.role() = 'service_role'
-    OR EXISTS (
-      SELECT 1
-      FROM public.fantacalcio_leghe l
-      WHERE l.id = public.fantacalcio_partite.lega_id
-        AND l.creatore_id = auth.uid()
-    )
+    OR public.fantacalcio_is_creatore_lega(lega_id, auth.uid())
   );
 
 CREATE POLICY fantacalcio_voti_calciatori_select_policy
@@ -666,12 +690,9 @@ CREATE POLICY fantacalcio_voti_calciatori_select_policy
   FOR SELECT
   USING (
     auth.role() = 'service_role'
-    OR EXISTS (
-      SELECT 1
-      FROM public.fantacalcio_partite p
-      JOIN public.fantacalcio_membri_lega ml ON ml.lega_id = p.lega_id
-      WHERE p.id = public.fantacalcio_voti_calciatori.partita_id
-        AND ml.user_id = auth.uid()
+    OR public.fantacalcio_is_membro_lega(
+      public.fantacalcio_lega_di_partita(partita_id),
+      auth.uid()
     )
   );
 
@@ -680,22 +701,16 @@ CREATE POLICY fantacalcio_voti_calciatori_write_policy
   FOR ALL
   USING (
     auth.role() = 'service_role'
-    OR EXISTS (
-      SELECT 1
-      FROM public.fantacalcio_partite p
-      JOIN public.fantacalcio_leghe l ON l.id = p.lega_id
-      WHERE p.id = public.fantacalcio_voti_calciatori.partita_id
-        AND l.creatore_id = auth.uid()
+    OR public.fantacalcio_is_creatore_lega(
+      public.fantacalcio_lega_di_partita(partita_id),
+      auth.uid()
     )
   )
   WITH CHECK (
     auth.role() = 'service_role'
-    OR EXISTS (
-      SELECT 1
-      FROM public.fantacalcio_partite p
-      JOIN public.fantacalcio_leghe l ON l.id = p.lega_id
-      WHERE p.id = public.fantacalcio_voti_calciatori.partita_id
-        AND l.creatore_id = auth.uid()
+    OR public.fantacalcio_is_creatore_lega(
+      public.fantacalcio_lega_di_partita(partita_id),
+      auth.uid()
     )
   );
 
@@ -744,6 +759,40 @@ CREATE TRIGGER set_updated_at_fantacalcio_commenti_documenti
   FOR EACH ROW
   EXECUTE FUNCTION public.set_updated_at();
 
+-- -----------------------------------------------------------------------------
+-- Fantacalcio: funzione di supporto per le policy RLS (bacheca)
+--
+-- Riproduce la logica di visibilita' dei documenti. Serve alle policy di
+-- `fantacalcio_commenti_documenti` perche' una sottoquery su
+-- `fantacalcio_documenti` riattiverebbe la RLS di quella tabella, che a sua
+-- volta interroga `fantacalcio_membri_lega`.
+-- -----------------------------------------------------------------------------
+
+CREATE OR REPLACE FUNCTION public.fantacalcio_puo_vedere_documento(
+  p_documento_id uuid,
+  p_user_id uuid
+)
+RETURNS boolean
+LANGUAGE sql
+STABLE
+SECURITY DEFINER
+SET search_path = ''
+AS $$
+  SELECT EXISTS (
+    SELECT 1
+    FROM public.fantacalcio_documenti d
+    WHERE d.id = p_documento_id
+      AND (
+        d.autore_id = p_user_id
+        OR d.visibilita = 'globale'
+        OR (
+          d.lega_id IS NOT NULL
+          AND public.fantacalcio_is_membro_lega(d.lega_id, p_user_id)
+        )
+      )
+  );
+$$;
+
 ALTER TABLE public.fantacalcio_documenti ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.fantacalcio_commenti_documenti ENABLE ROW LEVEL SECURITY;
 
@@ -754,15 +803,7 @@ CREATE POLICY fantacalcio_documenti_select_policy
     auth.role() = 'service_role'
     OR autore_id = auth.uid()
     OR visibilita = 'globale'
-    OR (
-      lega_id IS NOT NULL
-      AND EXISTS (
-        SELECT 1
-        FROM public.fantacalcio_membri_lega ml
-        WHERE ml.lega_id = public.fantacalcio_documenti.lega_id
-          AND ml.user_id = auth.uid()
-      )
-    )
+    OR public.fantacalcio_is_membro_lega(lega_id, auth.uid())
   );
 
 CREATE POLICY fantacalcio_documenti_insert_policy
@@ -774,28 +815,13 @@ CREATE POLICY fantacalcio_documenti_insert_policy
       auth.role() = 'service_role'
       OR (
         visibilita = 'globale'
-        AND EXISTS (
-          SELECT 1
-          FROM public.profiles p
-          WHERE p.id = auth.uid() AND p.ruolo = 'admin'
-        )
+        AND public.fantacalcio_is_admin(auth.uid())
       )
       OR (
         lega_id IS NOT NULL
         AND (
-          EXISTS (
-            SELECT 1
-            FROM public.fantacalcio_leghe l
-            WHERE l.id = lega_id
-              AND l.creatore_id = auth.uid()
-          )
-          OR EXISTS (
-            SELECT 1
-            FROM public.fantacalcio_membri_lega ml
-            WHERE ml.lega_id = lega_id
-              AND ml.user_id = auth.uid()
-              AND ml.ruolo = 'gestore'
-          )
+          public.fantacalcio_is_creatore_lega(lega_id, auth.uid())
+          OR public.fantacalcio_is_gestore_lega(lega_id, auth.uid())
         )
       )
     )
@@ -817,11 +843,7 @@ CREATE POLICY fantacalcio_commenti_documenti_select_policy
   FOR SELECT
   USING (
     auth.role() = 'service_role'
-    OR EXISTS (
-      SELECT 1
-      FROM public.fantacalcio_documenti d
-      WHERE d.id = public.fantacalcio_commenti_documenti.documento_id
-    )
+    OR public.fantacalcio_puo_vedere_documento(documento_id, auth.uid())
   );
 
 CREATE POLICY fantacalcio_commenti_documenti_insert_policy
@@ -861,6 +883,40 @@ GRANT ALL ON FUNCTION "public"."set_updated_at"() TO "service_role";
 GRANT ALL ON FUNCTION "public"."set_private_item_owner_id"() TO "anon";
 GRANT ALL ON FUNCTION "public"."set_private_item_owner_id"() TO "authenticated";
 GRANT ALL ON FUNCTION "public"."set_private_item_owner_id"() TO "service_role";
+
+-- Fantacalcio: le policy RLS invocano queste funzioni con il ruolo del
+-- richiedente, quindi `anon` e `authenticated` devono poterle eseguire.
+GRANT ALL ON FUNCTION "public"."fantacalcio_is_membro_lega"(uuid, uuid) TO "anon";
+GRANT ALL ON FUNCTION "public"."fantacalcio_is_membro_lega"(uuid, uuid) TO "authenticated";
+GRANT ALL ON FUNCTION "public"."fantacalcio_is_membro_lega"(uuid, uuid) TO "service_role";
+
+GRANT ALL ON FUNCTION "public"."fantacalcio_is_creatore_lega"(uuid, uuid) TO "anon";
+GRANT ALL ON FUNCTION "public"."fantacalcio_is_creatore_lega"(uuid, uuid) TO "authenticated";
+GRANT ALL ON FUNCTION "public"."fantacalcio_is_creatore_lega"(uuid, uuid) TO "service_role";
+
+GRANT ALL ON FUNCTION "public"."fantacalcio_is_gestore_lega"(uuid, uuid) TO "anon";
+GRANT ALL ON FUNCTION "public"."fantacalcio_is_gestore_lega"(uuid, uuid) TO "authenticated";
+GRANT ALL ON FUNCTION "public"."fantacalcio_is_gestore_lega"(uuid, uuid) TO "service_role";
+
+GRANT ALL ON FUNCTION "public"."fantacalcio_is_admin"(uuid) TO "anon";
+GRANT ALL ON FUNCTION "public"."fantacalcio_is_admin"(uuid) TO "authenticated";
+GRANT ALL ON FUNCTION "public"."fantacalcio_is_admin"(uuid) TO "service_role";
+
+GRANT ALL ON FUNCTION "public"."fantacalcio_is_proprietario_squadra"(uuid, uuid) TO "anon";
+GRANT ALL ON FUNCTION "public"."fantacalcio_is_proprietario_squadra"(uuid, uuid) TO "authenticated";
+GRANT ALL ON FUNCTION "public"."fantacalcio_is_proprietario_squadra"(uuid, uuid) TO "service_role";
+
+GRANT ALL ON FUNCTION "public"."fantacalcio_puo_vedere_squadra"(uuid, uuid) TO "anon";
+GRANT ALL ON FUNCTION "public"."fantacalcio_puo_vedere_squadra"(uuid, uuid) TO "authenticated";
+GRANT ALL ON FUNCTION "public"."fantacalcio_puo_vedere_squadra"(uuid, uuid) TO "service_role";
+
+GRANT ALL ON FUNCTION "public"."fantacalcio_lega_di_partita"(uuid) TO "anon";
+GRANT ALL ON FUNCTION "public"."fantacalcio_lega_di_partita"(uuid) TO "authenticated";
+GRANT ALL ON FUNCTION "public"."fantacalcio_lega_di_partita"(uuid) TO "service_role";
+
+GRANT ALL ON FUNCTION "public"."fantacalcio_puo_vedere_documento"(uuid, uuid) TO "anon";
+GRANT ALL ON FUNCTION "public"."fantacalcio_puo_vedere_documento"(uuid, uuid) TO "authenticated";
+GRANT ALL ON FUNCTION "public"."fantacalcio_puo_vedere_documento"(uuid, uuid) TO "service_role";
 
 -- =============================================================================
 -- Grants: Tables
