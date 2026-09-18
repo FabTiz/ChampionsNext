@@ -5,6 +5,7 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 
 type SupabaseStatus = {
+  API_URL: string;
   PUBLISHABLE_KEY: string;
   SECRET_KEY: string;
 };
@@ -12,18 +13,32 @@ type SupabaseStatus = {
 const scriptDir = path.dirname(fileURLToPath(import.meta.url));
 const repoRoot = path.resolve(scriptDir, "..");
 const databaseDir = path.join(repoRoot, "apps/database");
-const envFiles = [path.join(repoRoot, ".env.local")];
+// `next dev` uses `apps/web` as its project directory, so Next only reads env
+// files from there (the root files are never loaded by the web app). The root
+// file is kept for scripts and tooling, which also use the server-only secret.
+const envTargets: { path: string; keys: (keyof SupabaseStatus)[] }[] = [
+  {
+    path: path.join(repoRoot, ".env.local"),
+    keys: ["API_URL", "PUBLISHABLE_KEY", "SECRET_KEY"],
+  },
+  {
+    path: path.join(repoRoot, "apps/web/.env.local"),
+    keys: ["API_URL", "PUBLISHABLE_KEY"],
+  },
+];
 
 async function main(): Promise<void> {
   const statusOutput = await runSupabaseStatus();
   const status = parseSupabaseStatus(statusOutput);
 
-  for (const filePath of envFiles) {
-    await updateEnvFile(filePath, status);
+  for (const target of envTargets) {
+    await updateEnvFile(target.path, status, target.keys);
   }
 
   process.stdout.write(
-    `Updated Supabase env files with publishable and secret keys from ${path.relative(
+    `Updated Supabase env files (${envTargets
+      .map((target) => path.relative(repoRoot, target.path))
+      .join(", ")}) with the API URL and keys from ${path.relative(
       repoRoot,
       databaseDir,
     )}.\n`,
@@ -32,9 +47,22 @@ async function main(): Promise<void> {
 
 function runSupabaseStatus(): Promise<string> {
   return new Promise((resolve, reject) => {
+    // `apps/database` depends on the `supabase` CLI package, whose `bin` entry
+    // is `dist/supabase.js`. Running that script with the current Node
+    // executable avoids the Windows `.cmd` shim problem entirely: `spawn` fails
+    // with ENOENT on the bare name and EINVAL on `pnpm.cmd`, while going through
+    // a shell would reintroduce argument-escaping issues (DEP0190).
+    const supabaseCliPath = path.join(
+      databaseDir,
+      "node_modules",
+      "supabase",
+      "dist",
+      "supabase.js",
+    );
+
     const child = spawn(
-      "pnpm",
-      ["exec", "supabase", "status", "--output", "json"],
+      process.execPath,
+      [supabaseCliPath, "status", "--output", "json"],
       {
         cwd: databaseDir,
         env: process.env,
@@ -79,8 +107,10 @@ function parseSupabaseStatus(output: string): SupabaseStatus {
   const parsed = JSON.parse(jsonBlock) as Record<string, unknown>;
   const publishableKey = readStringValue(parsed, "PUBLISHABLE_KEY");
   const secretKey = readStringValue(parsed, "SECRET_KEY");
+  const apiUrl = readStringValue(parsed, "API_URL");
 
   return {
+    API_URL: apiUrl,
     PUBLISHABLE_KEY: publishableKey,
     SECRET_KEY: secretKey,
   };
@@ -143,11 +173,12 @@ function extractJsonBlock(text: string): string | null {
 async function updateEnvFile(
   filePath: string,
   values: SupabaseStatus,
+  keys: (keyof SupabaseStatus)[],
 ): Promise<void> {
   const currentContent = existsSync(filePath)
     ? await readFile(filePath, "utf8")
     : "";
-  const nextContent = rewriteEnvFile(currentContent, values);
+  const nextContent = rewriteEnvFile(currentContent, values, keys);
 
   if (currentContent !== nextContent) {
     await mkdir(path.dirname(filePath), { recursive: true });
@@ -155,13 +186,25 @@ async function updateEnvFile(
   }
 }
 
-function rewriteEnvFile(content: string, values: SupabaseStatus): string {
+const envKeyByStatusKey: Record<keyof SupabaseStatus, string> = {
+  API_URL: "NEXT_PUBLIC_SUPABASE_URL",
+  PUBLISHABLE_KEY: "NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY",
+  SECRET_KEY: "SUPABASE_SECRET_KEY",
+};
+
+function rewriteEnvFile(
+  content: string,
+  values: SupabaseStatus,
+  statusKeys: (keyof SupabaseStatus)[],
+): string {
   const newline = content.includes("\r\n") ? "\r\n" : "\n";
   const lines = content === "" ? [] : content.split(/\r?\n/);
-  const updates: Record<string, string> = {
-    NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY: values.PUBLISHABLE_KEY,
-    SUPABASE_SECRET_KEY: values.SECRET_KEY,
-  };
+  const updates: Record<string, string> = Object.fromEntries(
+    statusKeys.map((statusKey) => [
+      envKeyByStatusKey[statusKey],
+      values[statusKey],
+    ]),
+  );
   const keys = Object.keys(updates);
   const seen = new Set<string>();
 
