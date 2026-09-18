@@ -1,17 +1,17 @@
 /** @type {import('next-sitemap').IConfig} */
+
+// The generated files are committed under `public/`, so the URL must not depend
+// on whatever environment happens to run the build. A plain `localhost` default
+// meant that building locally overwrote the committed files with unreachable
+// URLs, and those stale files are what ended up being served in production.
+//
+// An explicit override wins, then Vercel's own production domain (so custom
+// domains are picked up automatically), and finally the real deployed domain.
 function getSiteUrl() {
-  // Order matters: an explicit override wins, then Vercel's own domain
-  // variables, and only as a last resort a local URL.
-  //
-  // `VERCEL_PROJECT_PRODUCTION_URL` is preferred over `VERCEL_URL` because it
-  // points at the stable production domain, not at the individual deployment
-  // (which is what a sitemap should advertise). Both are injected by Vercel at
-  // build time and require "System Environment Variables" to be enabled.
   const siteUrl =
     process.env.NEXT_PUBLIC_SITE_URL ??
     process.env.VERCEL_PROJECT_PRODUCTION_URL ??
-    process.env.VERCEL_URL ??
-    'http://localhost:3000';
+    'championsnext-web.vercel.app';
 
   return siteUrl.startsWith('http') ? siteUrl : `https://${siteUrl}`;
 }

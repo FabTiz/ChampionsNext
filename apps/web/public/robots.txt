@@ -3,7 +3,7 @@ User-agent: *
 Allow: /
 
 # Host
-Host: https://my-awesome-saas.com
+Host: https://championsnext-web.vercel.app
 
 # Sitemaps
-Sitemap: https://my-awesome-saas.com/sitemap.xml
+Sitemap: https://championsnext-web.vercel.app/sitemap.xml
